@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A4 Sticker Label Studio (Ref. 1276 / Universal)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- QRious for crisp Canvas/DataURL QR Codes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <!-- jsPDF & html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <style>
+    @page {
+      size: auto;
+      margin: 0mm !important;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #print-mount, #print-mount * {
+        visibility: visible !important;
+      }
+      #print-mount {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .page-sheet {
+        page-break-after: always !important;
+        break-after: page !important;
+        box-shadow: none !important;
+      }
+      .page-sheet:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+    }
+
+    .preview-sheet {
+      box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.1);
+      background-color: #ffffff;
+      transform-origin: top center;
+    }
+
+    .sticker-slot {
+      transition: background-color 0.12s ease, opacity 0.12s ease;
+    }
+    .sticker-slot:hover .skip-badge {
+      opacity: 1 !important;
+    }
+
+    input[type=range] {
+      accent-color: #3b82f6;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased select-none">
+
+  <!-- Top App Navigation / Header -->
+  <header class="no-print h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="bg-blue-600 text-white p-2 rounded-lg shadow-sm">
+        <i data-lucide="tag" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+          Universal Sticker Studio <span id="header-badge" class="text-xs px-2 py-0.5 rounded bg-blue-900/60 text-blue-300 border border-blue-700/50">A4 • 3×7 (21/sheet)</span>
+          <span id="autosave-badge" class="text-[10px] font-normal px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 flex items-center gap-1">
+            <i data-lucide="check" class="w-3 h-3"></i> Auto-Saved
+          </span>
+        </h1>
+        <p class="text-[11px] text-slate-400">Ref. 1276 • Lexmark X954 4.5mm Safe Guard • Click any sticker to skip</p>
+      </div>
+    </div>
+
+    <!-- Quick action buttons -->
+    <div class="flex items-center gap-2">
+      <!-- Reset Defaults button in Header -->
+      <button id="btn-header-reset" class="text-xs px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-800/60 flex items-center gap-1 transition" title="Clear saved settings and restore Ref. 1276 defaults">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Defaults
+      </button>
+
+      <!-- Plain paper test border toggle -->
+      <button id="btn-print-test" class="text-xs px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/40 flex items-center gap-1.5 transition" title="Toggle dashed cut lines for testing alignment on plain paper">
+        <i data-lucide="scan-line" class="w-3.5 h-3.5"></i> <span id="test-border-btn-label">Test Borders: OFF</span>
+      </button>
+
+      <!-- Open in New Tab (100% reliable on all OS/Sandboxes) -->
+      <button id="btn-open-tab" class="text-xs font-medium px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition" title="Opens printable sheet in a clean browser window">
+        <i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-400"></i> Open Printable Tab
+      </button>
+
+      <!-- 1-Click Direct Download PDF -->
+      <button id="btn-download-pdf" class="text-xs font-semibold px-4 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
+        <i data-lucide="download" class="w-4 h-4"></i> Save PDF
+      </button>
+    </div>
+  </header>
+
+  <!-- Main workspace -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- Left Controls Panel -->
+    <aside class="no-print w-[420px] bg-slate-900 border-r border-slate-800 flex flex-col h-full z-20 shrink-0">
+      
+      <!-- Tab Navigation -->
+      <div class="flex border-b border-slate-800 bg-slate-900/80 p-1 text-xs font-medium">
+        <button id="tab-btn-content" class="tab-btn flex-1 py-2 rounded-md flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-sm" onclick="switchTab('content')">
+          <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Data & Vars
+        </button>
+        <button id="tab-btn-layout" class="tab-btn flex-1 py-2 rounded-md flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200" onclick="switchTab('layout')">
+          <i data-lucide="grid" class="w-3.5 h-3.5"></i> Sheet & Skip
+        </button>
+        <button id="tab-btn-style" class="tab-btn flex-1 py-2 rounded-md flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200" onclick="switchTab('style')">
+          <i data-lucide="palette" class="w-3.5 h-3.5"></i> Fonts & Colors
+        </button>
+      </div>
+
+      <!-- Controls Tab Body -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-slate-300">
+
+        <!-- TAB 1: CONTENT, VARIABLES & QR -->
+        <div id="tab-content" class="space-y-4">
+          
+          <!-- Mode Selector -->
+          <div class="space-y-1.5">
+            <label class="block font-semibold text-slate-200">Fill Mode</label>
+            <div class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
+              <button id="mode-all" onclick="setContentMode('all')" class="py-1.5 rounded text-xs font-medium bg-blue-600 text-white transition">
+                Repeat Single Design
+              </button>
+              <button id="mode-individual" onclick="setContentMode('individual')" class="py-1.5 rounded text-xs font-medium text-slate-400 hover:text-slate-200 transition">
+                Bulk List / Multi-page
+              </button>
+            </div>
+          </div>
+
+          <!-- Custom Variables & Dynamic Tokens Card -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                <i data-lucide="braces" class="w-3.5 h-3.5 text-purple-400"></i> Variables & Smart Tokens
+              </span>
+              <button type="button" onclick="addCustomVariable()" class="text-[11px] px-2 py-0.5 rounded bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 font-medium transition">
+                + Add Variable
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400 leading-normal">
+              Click any token below to insert it into your active text box, or type <code class="text-purple-300">{name}</code> anywhere.
+            </p>
+
+            <!-- Clickable Variable Pills -->
+            <div id="variable-pills" class="flex flex-wrap gap-1.5 pt-0.5">
+              <!-- Populated dynamically -->
+            </div>
+
+            <!-- User-defined Variable Rows -->
+            <div id="custom-vars-list" class="space-y-1.5 pt-1 border-t border-slate-800/80">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Mode 1: Single Pattern Inputs -->
+          <div id="section-mode-all" class="space-y-3">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-slate-400 font-medium">Total Active Stickers Needed</label>
+                <span id="repeat-count-display" class="text-blue-400 font-mono font-medium">21 stickers (1 page)</span>
+              </div>
+              <input type="number" id="input-repeat-count" value="21" min="1" max="1000" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-white focus:border-blue-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block mb-1 text-slate-400">Header / Title</label>
+              <input type="text" id="input-title" data-var-target="true" value="PREMIUM ARTISAN BLEND" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-white font-medium focus:border-blue-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block mb-1 text-slate-400">Body Text (Supports <code class="text-purple-300">{vars}</code>)</label>
+              <textarea id="input-body" data-var-target="true" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-blue-500">Batch: {batch} • Packed: {date}
+Inspector: {inspector}
+Sticker {n} of {total}</textarea>
+            </div>
+
+            <div>
+              <label class="block mb-1 text-slate-400">Footer Tag / Price Badge</label>
+              <input type="text" id="input-tag" data-var-target="true" value="{price}" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-white focus:border-blue-500 focus:outline-none" placeholder="e.g. USD $12.50 or leave empty">
+            </div>
+          </div>
+
+          <!-- Mode 2: Multi-line / Bulk Sequential List -->
+          <div id="section-mode-individual" class="space-y-3 hidden">
+            <div class="bg-blue-950/40 border border-blue-800/50 p-2.5 rounded text-blue-200 text-[11px] leading-relaxed">
+              <strong>Multi-Page Support:</strong> Paste 1 item per line (or <code class="text-white">Title, Body details</code>). All variables like <code class="text-purple-300">{batch}</code> or <code class="text-purple-300">{n}</code> work inside your list too!
+            </div>
+
+            <div class="flex items-center justify-between text-[11px]">
+              <span id="bulk-stats-label" class="text-slate-400 font-mono">0 items</span>
+              <div class="flex gap-2">
+                <button type="button" id="btn-sample-addresses" class="text-blue-400 hover:underline">Sample Addresses (24)</button>
+                <span>•</span>
+                <button type="button" id="btn-sample-products" class="text-blue-400 hover:underline">Sample Products</button>
+              </div>
+            </div>
+
+            <div>
+              <textarea id="input-list" data-var-target="true" rows="8" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-blue-500" placeholder="Item 1, Batch {batch}&#10;Item 2, Batch {batch}&#10;Item 3, Batch {batch}..."></textarea>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label class="text-slate-400 text-[11px]">Print each line:</label>
+              <input type="number" id="input-item-repeat" value="1" min="1" max="50" class="w-16 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-center">
+              <span class="text-slate-400 text-[11px]">time(s)</span>
+            </div>
+          </div>
+
+          <!-- Simplified QR Code Toggle -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                <i data-lucide="qr-code" class="w-3.5 h-3.5 text-emerald-400"></i> Include QR Code
+              </span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="check-show-qr" class="sr-only peer">
+                <div class="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div id="qr-options" class="space-y-2 hidden pt-1">
+              <div>
+                <label class="text-[10px] text-slate-400 block mb-1">QR Content / URL (Variables supported!)</label>
+                <input type="text" id="input-qr-text" data-var-target="true" value="https://example.com/verify?batch={batch}&id={n}" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-[11px] focus:border-emerald-500 focus:outline-none" placeholder="https://... or {batch}-{n}">
+              </div>
+              <div class="flex items-center justify-between text-[11px] pt-0.5">
+                <span class="text-slate-400">QR Placement:</span>
+                <select id="qr-placement" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white">
+                  <option value="right">Right Side</option>
+                  <option value="left">Left Side</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Numbering Badge Controls (#1, #2...) -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                <i data-lucide="hash" class="w-3.5 h-3.5 text-blue-400"></i> Corner / Inline Numbering (#1, #2)
+              </span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="check-show-number" class="sr-only peer">
+                <div class="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div id="numbering-options" class="space-y-2 hidden pt-1">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-0.5">Prefix</label>
+                  <input type="text" id="num-prefix" value="#" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white">
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-0.5">Start Number</label>
+                  <input type="number" id="num-start" value="1" min="0" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-0.5">Placement</label>
+                  <select id="num-placement" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white">
+                    <option value="badge-tl">Top-Left Badge</option>
+                    <option value="badge-tr">Top-Right Badge</option>
+                    <option value="inline">Header Title Inline</option>
+                    <option value="bottom">Footer Corner</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-0.5">Zero Padding</label>
+                  <select id="num-padding" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white">
+                    <option value="0">None (#1)</option>
+                    <option value="2">2 Digits (#01)</option>
+                    <option value="3">3 Digits (#001)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB 2: SHEET LAYOUT & PARTIAL SHEET SAVER (SKIP SLOTS) -->
+        <div id="tab-layout" class="space-y-4 hidden">
+          
+          <!-- Partial Sheet Saver (Skip Used Stickers) -->
+          <div class="bg-emerald-950/30 border border-emerald-700/50 p-3 rounded-lg space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-emerald-300 flex items-center gap-1.5">
+                <i data-lucide="recycle" class="w-4 h-4"></i> Reuse Partial Sheet (Skip Stickers)
+              </span>
+              <button type="button" onclick="clearAllSkippedSlots()" class="text-[10px] text-emerald-400 hover:underline">Reset Skips</button>
+            </div>
+            <p class="text-[11px] text-emerald-100/80 leading-normal">
+              Already peeled off the first few stickers? Set where to start below, or <strong>click any sticker directly on the preview sheet</strong> to skip it! Remaining stickers shift forward automatically.
+            </p>
+            <div class="flex items-center justify-between gap-3 pt-1">
+              <label class="text-slate-200 font-medium text-[11px]">Start printing at sticker #:</label>
+              <div class="flex items-center gap-1.5">
+                <input type="number" id="input-start-slot" value="1" min="1" max="200" class="w-20 bg-slate-900 border border-emerald-600/60 rounded px-2.5 py-1 text-white font-bold text-center">
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-emerald-300/90 pt-0.5 font-mono">
+              <span>Skipped slots on sheet:</span>
+              <span id="skipped-count-badge">0 skipped</span>
+            </div>
+          </div>
+
+          <!-- Paper Size -->
+          <div>
+            <label class="block mb-1 font-semibold text-slate-200">Paper Format</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="paper-a4" onclick="setPaperFormat('A4')" class="py-1.5 rounded text-xs font-semibold bg-blue-600 text-white border border-blue-500">
+                A4 (210 × 297 mm)
+              </button>
+              <button id="paper-letter" onclick="setPaperFormat('LETTER')" class="py-1.5 rounded text-xs font-semibold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white">
+                US Letter (215.9 × 279.4 mm)
+              </button>
+            </div>
+          </div>
+
+          <!-- Presets -->
+          <div>
+            <label class="block mb-1 font-semibold text-slate-200">Template Presets</label>
+            <select id="select-preset" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-blue-500">
+              <option value="1276" selected>Ref 1276: 3×7 (70.0 × 42.4mm - 21/sheet)</option>
+              <option value="1263">Ref 1263: 3×8 (70.0 × 37.1mm - 24/sheet)</option>
+              <option value="1277">Ref 1277: 2×7 (105.0 × 42.4mm - 14/sheet)</option>
+              <option value="1264">Ref 1264: 2×2 (105.0 × 148.5mm - 4/sheet)</option>
+              <option value="4x10">Mini 4×10 (52.5 × 29.7mm - 40/sheet)</option>
+              <option value="5160">Avery 5160 (Letter 3×10 - 30/sheet)</option>
+              <option value="custom">-- Custom Grid (Auto Calculates Size) --</option>
+            </select>
+          </div>
+
+          <!-- Auto-Calculation Card -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                <i data-lucide="calculator" class="w-3.5 h-3.5 text-blue-400"></i> Auto Size Calculator
+              </span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/60 font-mono">Dynamic</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[10px] text-slate-400 block mb-1">Columns Across</label>
+                <div class="flex items-center">
+                  <button type="button" onclick="adjustGrid('cols', -1)" class="w-7 h-7 bg-slate-900 border border-slate-700 rounded-l flex items-center justify-center font-bold hover:bg-slate-800 text-white">-</button>
+                  <input type="number" id="grid-cols" value="3" min="1" max="15" class="w-full h-7 bg-slate-900 border-y border-slate-700 text-center text-white font-bold">
+                  <button type="button" onclick="adjustGrid('cols', 1)" class="w-7 h-7 bg-slate-900 border border-slate-700 rounded-r flex items-center justify-center font-bold hover:bg-slate-800 text-white">+</button>
+                </div>
+              </div>
+
+              <div>
+                <label class="text-[10px] text-slate-400 block mb-1">Rows Down</label>
+                <div class="flex items-center">
+                  <button type="button" onclick="adjustGrid('rows', -1)" class="w-7 h-7 bg-slate-900 border border-slate-700 rounded-l flex items-center justify-center font-bold hover:bg-slate-800 text-white">-</button>
+                  <input type="number" id="grid-rows" value="7" min="1" max="30" class="w-full h-7 bg-slate-900 border-y border-slate-700 text-center text-white font-bold">
+                  <button type="button" onclick="adjustGrid('rows', 1)" class="w-7 h-7 bg-slate-900 border border-slate-700 rounded-r flex items-center justify-center font-bold hover:bg-slate-800 text-white">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Auto calculated display metrics -->
+            <div class="bg-slate-900/90 rounded p-2.5 border border-slate-800 text-[11px] space-y-1 font-mono">
+              <div class="flex justify-between">
+                <span class="text-slate-400 font-sans">Labels per Sheet:</span>
+                <span id="calc-total-per-sheet" class="text-white font-bold">21 labels</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400 font-sans">Calculated Width:</span>
+                <span id="calc-width-display" class="text-emerald-400 font-semibold">70.00 mm</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400 font-sans">Calculated Height:</span>
+                <span id="calc-height-display" class="text-emerald-400 font-semibold">42.43 mm</span>
+              </div>
+              <div class="pt-1 border-t border-slate-800/80 text-[10px] text-slate-400 flex justify-between">
+                <span class="font-sans">Active Formula:</span>
+                <span id="calc-formula-display" class="text-blue-300">210÷3 × 297÷7 mm</span>
+              </div>
+            </div>
+
+            <!-- Structured Sheet Outer Padding & Inter-Label Pitch Gaps -->
+            <div class="pt-2 border-t border-slate-800/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                  <i data-lucide="maximize-2" class="w-3 h-3 text-blue-400"></i> Sheet Margins & Label Gaps (mm)
+                </span>
+                <button type="button" onclick="resetSheetMarginsAndGaps()" class="text-[10px] text-blue-400 hover:underline">Zero (Edge-to-Edge)</button>
+              </div>
+              <p class="text-[10px] text-slate-400 leading-normal">
+                Keep at <strong>0</strong> for edge-to-edge sheets like Ref. 1276. Adjust if your sheet has outer borders or pitch gaps between stickers:
+              </p>
+              <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-400">
+                <div>
+                  <label class="block mb-0.5">Top/Bottom Margin (mm)</label>
+                  <input type="number" id="sheet-margin-y" value="0" min="0" max="35" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-mono">
+                </div>
+                <div>
+                  <label class="block mb-0.5">Left/Right Margin (mm)</label>
+                  <input type="number" id="sheet-margin-x" value="0" min="0" max="35" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-mono">
+                </div>
+                <div>
+                  <label class="block mb-0.5">Horizontal Col Gap (mm)</label>
+                  <input type="number" id="label-gap-x" value="0" min="0" max="20" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-mono">
+                </div>
+                <div>
+                  <label class="block mb-0.5">Vertical Row Gap (mm)</label>
+                  <input type="number" id="label-gap-y" value="0" min="0" max="20" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-mono">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Safe Zone / Lexmark X954 Hardware Guard -->
+          <div class="bg-rose-950/30 border border-rose-800/40 p-3 rounded-lg space-y-2">
+            <div class="flex items-center gap-1.5 text-rose-300 font-semibold">
+              <i data-lucide="shield-alert" class="w-4 h-4 shrink-0"></i>
+              <span>Hardware Margin Safe Zone (Lexmark X954)</span>
+            </div>
+            <p class="text-[11px] text-rose-200/80 leading-normal">
+              Lexmark X954 series has a 4.2mm non-printable edge. Defaulting to <strong>4.5mm internal safe padding</strong> ensures zero clipped text on edge stickers.
+            </p>
+            <div>
+              <div class="flex justify-between text-[11px] mb-1">
+                <span>Internal Sticker Padding:</span>
+                <span id="safe-margin-val" class="font-mono text-white">4.5 mm</span>
+              </div>
+              <input type="range" id="input-safe-margin" min="1" max="12" step="0.5" value="4.5" class="w-full">
+            </div>
+            <label class="flex items-center gap-2 pt-1 cursor-pointer">
+              <input type="checkbox" id="check-show-safezone" checked class="rounded bg-slate-950 border-slate-700 text-rose-500 focus:ring-0">
+              <span class="text-[11px] text-rose-200">Show red dashed safe-zone boundary in preview</span>
+            </label>
+          </div>
+
+        </div>
+
+        <!-- TAB 3: CONSOLIDATED FONTS, COLORS & CALIBRATION -->
+        <div id="tab-style" class="space-y-4 hidden">
+          
+          <!-- Consolidated Single Typography Group -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
+            <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="type" class="w-3.5 h-3.5 text-blue-400"></i> Typography & Sizing
+            </span>
+
+            <!-- 1. Single Font Family Selector -->
+            <div>
+              <label class="block mb-1.5 text-slate-400 text-[11px]">Font Style</label>
+              <div class="grid grid-cols-3 gap-1.5 bg-slate-900 p-1 rounded border border-slate-800">
+                <button type="button" onclick="setFontChoice('sans')" id="font-btn-sans" class="py-1.5 px-2 rounded text-xs text-center font-medium bg-blue-600 text-white transition">
+                  Modern Sans
+                </button>
+                <button type="button" onclick="setFontChoice('serif')" id="font-btn-serif" class="py-1.5 px-2 rounded text-xs text-center text-slate-400 hover:text-white transition font-serif">
+                  Classic Serif
+                </button>
+                <button type="button" onclick="setFontChoice('mono')" id="font-btn-mono" class="py-1.5 px-2 rounded text-xs text-center text-slate-400 hover:text-white transition font-mono">
+                  Monospace
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. Single Unified Font Size Controller -->
+            <div class="space-y-2 pt-1 border-t border-slate-900">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>Font Size Scale:</span>
+                <span id="font-size-val" class="font-mono text-white font-semibold">100% (Normal)</span>
+              </div>
+              <div class="grid grid-cols-3 gap-1.5">
+                <button type="button" onclick="setFontScalePreset('sm')" id="scale-btn-sm" class="py-1 text-xs rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">Small (80%)</button>
+                <button type="button" onclick="setFontScalePreset('md')" id="scale-btn-md" class="py-1 text-xs rounded bg-blue-600/30 text-blue-300 border border-blue-500 font-medium">Normal (100%)</button>
+                <button type="button" onclick="setFontScalePreset('lg')" id="scale-btn-lg" class="py-1 text-xs rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">Large (125%)</button>
+              </div>
+              <input type="range" id="input-font-scale" min="60" max="160" step="5" value="100" class="w-full">
+            </div>
+
+            <!-- 3. Horizontal & Vertical Alignment -->
+            <div class="pt-1 border-t border-slate-900 grid grid-cols-2 gap-2">
+              <div>
+                <label class="block mb-1 text-slate-400 text-[10px]">Horizontal Align</label>
+                <div class="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded border border-slate-800">
+                  <button type="button" onclick="setTextAlign('left')" id="align-left" class="py-1 rounded text-center text-slate-400 hover:text-white transition">Left</button>
+                  <button type="button" onclick="setTextAlign('center')" id="align-center" class="py-1 rounded text-center bg-blue-600 text-white font-medium transition">Center</button>
+                  <button type="button" onclick="setTextAlign('right')" id="align-right" class="py-1 rounded text-center text-slate-400 hover:text-white transition">Right</button>
+                </div>
+              </div>
+              <div>
+                <label class="block mb-1 text-slate-400 text-[10px]">Vertical Align</label>
+                <div class="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded border border-slate-800">
+                  <button type="button" onclick="setVerticalAlign('flex-start')" id="valign-top" class="py-1 rounded text-center text-slate-400 hover:text-white transition">Top</button>
+                  <button type="button" onclick="setVerticalAlign('center')" id="valign-middle" class="py-1 rounded text-center bg-blue-600 text-white font-medium transition">Mid</button>
+                  <button type="button" onclick="setVerticalAlign('flex-end')" id="valign-bottom" class="py-1 rounded text-center text-slate-400 hover:text-white transition">Bot</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Color Customization -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
+            <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="palette" class="w-3.5 h-3.5 text-pink-400"></i> Colors & Swatches
+            </span>
+
+            <!-- Text Color -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-[11px] text-slate-300">Text & QR Color</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="color" id="picker-text-color" value="#0f172a" class="w-5 h-5 rounded cursor-pointer bg-transparent border-0 p-0">
+                  <span id="text-color-hex" class="font-mono text-[10px] text-slate-400">#0f172a</span>
+                </div>
+              </div>
+              <div class="flex gap-1.5">
+                <button type="button" onclick="setColor('text', '#000000')" class="w-6 h-6 rounded-full bg-[#000000] border border-slate-600 shadow-sm" title="Pure Black"></button>
+                <button type="button" onclick="setColor('text', '#0f172a')" class="w-6 h-6 rounded-full bg-[#0f172a] border border-slate-600 shadow-sm" title="Deep Slate"></button>
+                <button type="button" onclick="setColor('text', '#1e3a8a')" class="w-6 h-6 rounded-full bg-[#1e3a8a] border border-slate-600 shadow-sm" title="Classic Navy"></button>
+                <button type="button" onclick="setColor('text', '#14532d')" class="w-6 h-6 rounded-full bg-[#14532d] border border-slate-600 shadow-sm" title="Forest Green"></button>
+                <button type="button" onclick="setColor('text', '#7f1d1d')" class="w-6 h-6 rounded-full bg-[#7f1d1d] border border-slate-600 shadow-sm" title="Burgundy"></button>
+              </div>
+            </div>
+
+            <!-- Sticker Background Color -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-[11px] text-slate-300">Sticker Background</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="color" id="picker-bg-color" value="#ffffff" class="w-5 h-5 rounded cursor-pointer bg-transparent border-0 p-0">
+                  <span id="bg-color-hex" class="font-mono text-[10px] text-slate-400">#ffffff</span>
+                </div>
+              </div>
+              <div class="flex gap-1.5">
+                <button type="button" onclick="setColor('bg', '#ffffff')" class="w-6 h-6 rounded-full bg-[#ffffff] border border-slate-500 shadow-sm" title="Pure White"></button>
+                <button type="button" onclick="setColor('bg', '#faf8f5')" class="w-6 h-6 rounded-full bg-[#faf8f5] border border-slate-500 shadow-sm" title="Warm Cream"></button>
+                <button type="button" onclick="setColor('bg', '#f3f4f6')" class="w-6 h-6 rounded-full bg-[#f3f4f6] border border-slate-500 shadow-sm" title="Soft Gray"></button>
+                <button type="button" onclick="setColor('bg', '#fef3c7')" class="w-6 h-6 rounded-full bg-[#fef3c7] border border-slate-500 shadow-sm" title="Warm Kraft"></button>
+                <button type="button" onclick="setColor('bg', '#ecfdf5')" class="w-6 h-6 rounded-full bg-[#ecfdf5] border border-slate-500 shadow-sm" title="Mint Tint"></button>
+              </div>
+            </div>
+
+            <!-- Accent & Badge Color -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-[11px] text-slate-300">Badge & Tag Accent</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="color" id="picker-accent-color" value="#2563eb" class="w-5 h-5 rounded cursor-pointer bg-transparent border-0 p-0">
+                  <span id="accent-color-hex" class="font-mono text-[10px] text-slate-400">#2563eb</span>
+                </div>
+              </div>
+              <div class="flex gap-1.5">
+                <button type="button" onclick="setColor('accent', '#2563eb')" class="w-6 h-6 rounded-full bg-[#2563eb] border border-slate-500 shadow-sm" title="Vibrant Blue"></button>
+                <button type="button" onclick="setColor('accent', '#059669')" class="w-6 h-6 rounded-full bg-[#059669] border border-slate-500 shadow-sm" title="Emerald"></button>
+                <button type="button" onclick="setColor('accent', '#d97706')" class="w-6 h-6 rounded-full bg-[#d97706] border border-slate-500 shadow-sm" title="Amber"></button>
+                <button type="button" onclick="setColor('accent', '#dc2626')" class="w-6 h-6 rounded-full bg-[#dc2626] border border-slate-500 shadow-sm" title="Crimson"></button>
+                <button type="button" onclick="setColor('accent', '#475569')" class="w-6 h-6 rounded-full bg-[#475569] border border-slate-500 shadow-sm" title="Slate Neutral"></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Printer Hardware Calibration -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                <i data-lucide="crosshair" class="w-3.5 h-3.5 text-blue-400"></i> Printer Feed Shift / Offset
+              </span>
+              <button type="button" id="btn-reset-offsets" class="text-[10px] text-slate-400 hover:text-white underline">Reset</button>
+            </div>
+            <p class="text-[10px] text-slate-400">If your printer pulls sheets slightly left, right, or down, shift the entire grid in millimeters:</p>
+
+            <div>
+              <div class="flex justify-between text-[11px] mb-1">
+                <span>Horizontal Offset (X):</span>
+                <span id="offset-x-val" class="font-mono text-white">0.0 mm</span>
+              </div>
+              <input type="range" id="input-offset-x" min="-10" max="10" step="0.5" value="0" class="w-full">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] mb-1">
+                <span>Vertical Offset (Y):</span>
+                <span id="offset-y-val" class="font-mono text-white">0.0 mm</span>
+              </div>
+              <input type="range" id="input-offset-y" min="-10" max="10" step="0.5" value="0" class="w-full">
+            </div>
+          </div>
+
+          <!-- Cut lines check -->
+          <div class="border-t border-slate-800 pt-3 space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="check-print-borders" class="rounded bg-slate-950 border-slate-700 text-blue-600 focus:ring-0">
+              <span class="text-slate-200 font-medium">Print visible cut-line borders on PDF/Paper</span>
+            </label>
+            <p class="text-[10px] text-slate-400 leading-normal">
+              Keep <strong>OFF</strong> when printing onto pre-cut sticker sheets. Turn <strong>ON</strong> when doing a test print on plain paper.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Info -->
+      <div class="p-3 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <span id="footer-sheet-info">Paper: A4 (210 × 297mm)</span>
+        <button type="button" id="btn-reset-all" class="text-rose-400 hover:text-rose-300 transition">Reset All</button>
+      </div>
+
+    </aside>
+
+    <!-- Right: Multi-Sheet Interactive Preview Stage -->
+    <main class="flex-1 bg-slate-900/60 overflow-auto relative p-6 flex flex-col items-center justify-start">
+      
+      <!-- Preview toolbar overlay -->
+      <div class="no-print sticky top-0 mb-5 bg-slate-900/95 backdrop-blur border border-slate-800 px-4 py-2 rounded-full flex items-center gap-4 text-xs shadow-xl z-10 text-slate-300">
+        <span class="flex items-center gap-1.5 font-medium text-white">
+          <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i>
+          <span id="total-pages-badge">1 Page (21 Stickers)</span>
+        </span>
+        <div class="h-3 w-px bg-slate-700"></div>
+        <span class="text-[11px] text-emerald-400 flex items-center gap-1">
+          <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5"></i> Click any sticker to skip/unskip
+        </span>
+        <div class="h-3 w-px bg-slate-700"></div>
+        <div class="flex items-center gap-2">
+          <span>Zoom:</span>
+          <button type="button" id="zoom-out" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 flex items-center justify-center font-bold text-white">-</button>
+          <span id="zoom-label" class="font-mono text-white w-10 text-center">80%</span>
+          <button type="button" id="zoom-in" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 flex items-center justify-center font-bold text-white">+</button>
+          <button type="button" id="zoom-fit" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300">Reset</button>
+        </div>
+      </div>
+
+      <!-- Preview sheets container -->
+      <div id="preview-wrapper" class="origin-top flex flex-col items-center gap-10 pb-28">
+        <!-- Rendered dynamically -->
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="no-print fixed bottom-5 right-5 bg-slate-800 border border-slate-700 text-white px-4 py-2.5 rounded-lg text-xs shadow-xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-msg">Updated</span>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    const PAPER_SIZES = {
+      A4: { widthMm: 210, heightMm: 297, name: 'A4' },
+      LETTER: { widthMm: 215.9, heightMm: 279.4, name: 'US Letter' }
+    };
+
+    const FONTS = {
+      sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      serif: "'Playfair Display', Georgia, 'Times New Roman', serif",
+      mono: "'JetBrains Mono', 'Courier New', Menlo, Monaco, monospace"
+    };
+
+    // Track last focused text input for variable pill insertion
+    let lastFocusedInput = null;
+
+    // Cache generated QR data URLs so preview & PDF rendering are instant
+    const qrCache = new Map();
+
+    const STORAGE_KEY = 'universal_sticker_studio_v1';
+
+    const DEFAULT_STATE = {
+      paper: 'A4',
+      preset: '1276',
+      cols: 3,
+      rows: 7,
+      sheetMarginY: 0,
+      sheetMarginX: 0,
+      labelGapX: 0,
+      labelGapY: 0,
+      
+      // Auto-calculated label dimensions in millimeters
+      labelWidth: 70.0,
+      labelHeight: 42.43,
+
+      // Default 4.5mm Safe Margin for Lexmark X954
+      safeMargin: 4.5,
+      showSafeZone: true,
+      offsetX: 0.0,
+      offsetY: 0.0,
+      printBorders: false,
+      
+      // Consolidated Typography
+      fontChoice: 'sans',
+      fontFamily: FONTS.sans,
+      textAlign: 'center',
+      verticalAlign: 'center',
+      baseScale: 100,
+      titleSize: 11,
+      bodySize: 8.5,
+
+      // Colors
+      textColor: '#0f172a',
+      bgColor: '#ffffff',
+      accentColor: '#2563eb',
+
+      // Skip / Partial Sheet Saver (stores 0-based global slot indices that are skipped)
+      startAtSlot: 1,
+      manualSkippedSlots: new Set(),
+
+      // User-defined custom variables (clean & simple)
+      customVars: [
+        { key: 'batch', val: '2026-X' },
+        { key: 'inspector', val: 'QA-Team' },
+        { key: 'price', val: 'USD $12.50' }
+      ],
+
+      // QR Code
+      showQr: false,
+      qrText: 'https://example.com/verify?batch={batch}&id={n}',
+      qrPlacement: 'right',
+
+      // Numbering feature
+      showNumber: false,
+      numPrefix: '#',
+      numStart: 1,
+      numPlacement: 'badge-tl',
+      numPadding: 0,
+
+      // Modes
+      mode: 'all',
+      repeatCount: 21,
+      titleText: 'PREMIUM ARTISAN BLEND',
+      bodyText: 'Batch: {batch} • Packed: {date}\nInspector: {inspector}\nSticker {n} of {total}',
+      tagText: '{price}',
+
+      individualListText: '',
+      individualList: [],
+      itemRepeat: 1,
+
+      zoom: 0.8
+    };
+
+    const state = {
+      ...DEFAULT_STATE,
+      manualSkippedSlots: new Set(),
+      customVars: JSON.parse(JSON.stringify(DEFAULT_STATE.customVars))
+    };
+
+    // --- SILENT LOCALSTORAGE AUTO-SAVE & RESTORE ---
+    function saveStateToStorage() {
+      try {
+        const serialized = {
+          ...state,
+          manualSkippedSlots: Array.from(state.manualSkippedSlots)
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+        const badge = document.getElementById('autosave-badge');
+        if (badge) {
+          badge.classList.remove('opacity-60');
+          setTimeout(() => badge.classList.add('opacity-60'), 600);
+        }
+      } catch (e) {
+        console.warn('Auto-save skipped:', e);
+      }
+    }
+
+    function loadStateFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        Object.keys(DEFAULT_STATE).forEach(k => {
+          if (parsed[k] !== undefined && k !== 'manualSkippedSlots') {
+            state[k] = parsed[k];
+          }
+        });
+        state.fontFamily = FONTS[state.fontChoice] || FONTS.sans;
+        state.manualSkippedSlots = new Set(Array.isArray(parsed.manualSkippedSlots) ? parsed.manualSkippedSlots : []);
+        if (!Array.isArray(state.customVars)) {
+          state.customVars = JSON.parse(JSON.stringify(DEFAULT_STATE.customVars));
+        }
+        return true;
+      } catch (e) {
+        console.warn('Failed to restore state:', e);
+        return false;
+      }
+    }
+
+    function syncAllDomInputsFromState() {
+      document.getElementById('input-repeat-count').value = state.repeatCount;
+      document.getElementById('input-title').value = state.titleText;
+      document.getElementById('input-body').value = state.bodyText;
+      document.getElementById('input-tag').value = state.tagText;
+      document.getElementById('input-list').value = state.individualListText || '';
+      document.getElementById('input-item-repeat').value = state.itemRepeat;
+
+      document.getElementById('check-show-qr').checked = state.showQr;
+      document.getElementById('qr-options').classList.toggle('hidden', !state.showQr);
+      document.getElementById('input-qr-text').value = state.qrText;
+      document.getElementById('qr-placement').value = state.qrPlacement;
+
+      document.getElementById('check-show-number').checked = state.showNumber;
+      document.getElementById('numbering-options').classList.toggle('hidden', !state.showNumber);
+      document.getElementById('num-prefix').value = state.numPrefix;
+      document.getElementById('num-start').value = state.numStart;
+      document.getElementById('num-placement').value = state.numPlacement;
+      document.getElementById('num-padding').value = String(state.numPadding);
+
+      document.getElementById('input-start-slot').value = state.startAtSlot;
+      document.getElementById('select-preset').value = state.preset || 'custom';
+      document.getElementById('grid-cols').value = state.cols;
+      document.getElementById('grid-rows').value = state.rows;
+      document.getElementById('sheet-margin-y').value = state.sheetMarginY;
+      document.getElementById('sheet-margin-x').value = state.sheetMarginX;
+      document.getElementById('label-gap-x').value = state.labelGapX;
+      document.getElementById('label-gap-y').value = state.labelGapY;
+
+      document.getElementById('input-safe-margin').value = state.safeMargin;
+      document.getElementById('safe-margin-val').innerText = `${state.safeMargin.toFixed(1)} mm`;
+      document.getElementById('check-show-safezone').checked = state.showSafeZone;
+
+      document.getElementById('input-offset-x').value = state.offsetX;
+      document.getElementById('offset-x-val').innerText = `${state.offsetX > 0 ? '+' : ''}${state.offsetX.toFixed(1)} mm`;
+      document.getElementById('input-offset-y').value = state.offsetY;
+      document.getElementById('offset-y-val').innerText = `${state.offsetY > 0 ? '+' : ''}${state.offsetY.toFixed(1)} mm`;
+
+      document.getElementById('check-print-borders').checked = state.printBorders;
+      const btnLabel = document.getElementById('test-border-btn-label');
+      if (btnLabel) btnLabel.innerText = `Test Borders: ${state.printBorders ? 'ON' : 'OFF'}`;
+
+      document.getElementById('picker-text-color').value = state.textColor;
+      document.getElementById('text-color-hex').innerText = state.textColor;
+      document.getElementById('picker-bg-color').value = state.bgColor;
+      document.getElementById('bg-color-hex').innerText = state.bgColor;
+      document.getElementById('picker-accent-color').value = state.accentColor;
+      document.getElementById('accent-color-hex').innerText = state.accentColor;
+
+      document.getElementById('input-font-scale').value = state.baseScale;
+      document.getElementById('font-size-val').innerText = `${state.baseScale}%`;
+      applyCalculatedFontSizes();
+
+      // Update button toggles
+      ['sans', 'serif', 'mono'].forEach(f => {
+        const btn = document.getElementById(`font-btn-${f}`);
+        if (btn) {
+          btn.className = (f === state.fontChoice)
+            ? 'py-1.5 px-2 rounded text-xs text-center font-medium bg-blue-600 text-white transition'
+            : 'py-1.5 px-2 rounded text-xs text-center text-slate-400 hover:text-white transition';
+        }
+      });
+
+      ['left', 'center', 'right'].forEach(a => {
+        const btn = document.getElementById(`align-${a}`);
+        if (btn) {
+          btn.className = (a === state.textAlign)
+            ? 'py-1 rounded text-center bg-blue-600 text-white font-medium transition'
+            : 'py-1 rounded text-center text-slate-400 hover:text-white transition';
+        }
+      });
+
+      const vMap = { 'flex-start': 'top', 'center': 'middle', 'flex-end': 'bottom' };
+      Object.entries(vMap).forEach(([val, idSuffix]) => {
+        const btn = document.getElementById(`valign-${idSuffix}`);
+        if (btn) {
+          btn.className = (val === state.verticalAlign)
+            ? 'py-1 rounded text-center bg-blue-600 text-white font-medium transition'
+            : 'py-1 rounded text-center text-slate-400 hover:text-white transition';
+        }
+      });
+
+      setContentMode(state.mode, true);
+      setPaperFormat(state.paper, true);
+      updateSkippedCountBadge();
+      renderVariablesUI();
+      recalculateDimensions();
+    }
+
+    function resetAllToDefaults() {
+      localStorage.removeItem(STORAGE_KEY);
+      Object.keys(DEFAULT_STATE).forEach(k => {
+        if (k !== 'manualSkippedSlots' && k !== 'customVars') {
+          state[k] = DEFAULT_STATE[k];
+        }
+      });
+      state.manualSkippedSlots = new Set();
+      state.customVars = JSON.parse(JSON.stringify(DEFAULT_STATE.customVars));
+      qrCache.clear();
+      syncAllDomInputsFromState();
+      saveStateToStorage();
+      showToast('Restored Ref. 1276 factory defaults');
+    }
+
+    // --- VARIABLE & TOKEN ENGINE ---
+    function getTodayDateString() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function resolveTextVariables(rawText, activeIndex, totalActive) {
+      if (!rawText) return '';
+      let out = String(rawText);
+      const displayNum = state.numStart + activeIndex;
+      const paddedNum = state.numPadding > 0
+        ? String(displayNum).padStart(state.numPadding, '0')
+        : String(displayNum);
+
+      // Built-in tokens
+      out = out.replace(/\{n\}/gi, paddedNum);
+      out = out.replace(/\{total\}/gi, String(totalActive));
+      out = out.replace(/\{date\}/gi, getTodayDateString());
+
+      // User-defined custom variables
+      state.customVars.forEach(v => {
+        if (v.key && v.key.trim() !== '') {
+          const safeKey = v.key.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`\\{${safeKey}\\}`, 'gi');
+          out = out.replace(regex, v.val || '');
+        }
+      });
+      return out;
+    }
+
+    function renderVariablesUI() {
+      const pillsContainer = document.getElementById('variable-pills');
+      const listContainer = document.getElementById('custom-vars-list');
+
+      // Built-in + Custom Pills
+      const builtIns = [
+        { token: '{n}', desc: 'Sticker #' },
+        { token: '{total}', desc: 'Total Count' },
+        { token: '{date}', desc: 'Today' }
+      ];
+
+      let pillsHtml = builtIns.map(b => `
+        <button type="button" onclick="insertToken('${b.token}')" class="px-2 py-0.5 rounded bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-700/50 font-mono text-[10px] flex items-center gap-1 transition" title="Click to insert ${b.token}">
+          <span>${b.token}</span>
+          <span class="text-slate-400 font-sans">(${b.desc})</span>
+        </button>
+      `).join('');
+
+      state.customVars.forEach(v => {
+        if (v.key.trim()) {
+          const tok = `{${v.key.trim()}}`;
+          pillsHtml += `
+            <button type="button" onclick="insertToken('${tok}')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/50 font-mono text-[10px] transition" title="Click to insert ${tok}">
+              ${tok}
+            </button>
+          `;
+        }
+      });
+      pillsContainer.innerHTML = pillsHtml;
+
+      // Editable rows for custom variables
+      if (state.customVars.length === 0) {
+        listContainer.innerHTML = `<div class="text-[10px] text-slate-500 italic">No custom variables defined. Click "+ Add Variable" above.</div>`;
+      } else {
+        listContainer.innerHTML = state.customVars.map((v, idx) => `
+          <div class="flex items-center gap-1.5">
+            <div class="flex items-center bg-slate-900 border border-slate-700 rounded px-1.5 py-1 w-28 shrink-0">
+              <span class="text-purple-400 font-mono text-[11px]">{</span>
+              <input type="text" value="${escapeHtml(v.key)}" oninput="updateCustomVar(${idx}, 'key', this.value)" class="w-full bg-transparent text-white font-mono text-[11px] focus:outline-none" placeholder="name">
+              <span class="text-purple-400 font-mono text-[11px]">}</span>
+            </div>
+            <span class="text-slate-500">=</span>
+            <input type="text" value="${escapeHtml(v.val)}" oninput="updateCustomVar(${idx}, 'val', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-[11px] focus:border-purple-500 focus:outline-none" placeholder="Replacement value">
+            <button type="button" onclick="removeCustomVar(${idx})" class="text-slate-500 hover:text-rose-400 px-1" title="Remove variable">×</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    function addCustomVariable() {
+      const nextNum = state.customVars.length + 1;
+      state.customVars.push({ key: `var${nextNum}`, val: `Value ${nextNum}` });
+      renderVariablesUI();
+      renderPreview();
+    }
+
+    function updateCustomVar(idx, field, value) {
+      if (!state.customVars[idx]) return;
+      if (field === 'key') {
+        // strip braces or spaces from variable name
+        value = value.replace(/[{}\s]/g, '');
+      }
+      state.customVars[idx][field] = value;
+      // Re-render pills only if key changed
+      if (field === 'key') {
+        const pillsContainer = document.getElementById('variable-pills');
+        if (pillsContainer) {
+          // update pills without losing input focus
+          const builtIns = [
+            { token: '{n}', desc: 'Sticker #' },
+            { token: '{total}', desc: 'Total Count' },
+            { token: '{date}', desc: 'Today' }
+          ];
+          let pillsHtml = builtIns.map(b => `
+            <button type="button" onclick="insertToken('${b.token}')" class="px-2 py-0.5 rounded bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-700/50 font-mono text-[10px] flex items-center gap-1 transition">
+              <span>${b.token}</span>
+              <span class="text-slate-400 font-sans">(${b.desc})</span>
+            </button>
+          `).join('');
+          state.customVars.forEach(v => {
+            if (v.key.trim()) {
+              const tok = `{${v.key.trim()}}`;
+              pillsHtml += `
+                <button type="button" onclick="insertToken('${tok}')" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/50 font-mono text-[10px] transition">
+                  ${tok}
+                </button>
+              `;
+            }
+          });
+          pillsContainer.innerHTML = pillsHtml;
+        }
+      }
+      qrCache.clear();
+      renderPreview();
+    }
+
+    function removeCustomVar(idx) {
+      state.customVars.splice(idx, 1);
+      renderVariablesUI();
+      qrCache.clear();
+      renderPreview();
+    }
+
+    function insertToken(token) {
+      const target = lastFocusedInput || document.getElementById('input-body');
+      if (!target) return;
+
+      const start = target.selectionStart ?? target.value.length;
+      const end = target.selectionEnd ?? target.value.length;
+      const text = target.value;
+      target.value = text.substring(0, start) + token + text.substring(end);
+      target.focus();
+      target.selectionStart = target.selectionEnd = start + token.length;
+
+      // Trigger input event so state syncs
+      target.dispatchEvent(new Event('input'));
+      showToast(`Inserted ${token}`);
+    }
+
+    // --- QR CODE GENERATOR ---
+    function getQrDataUrl(text, colorHex) {
+      if (!text || !window.QRious) return '';
+      const cacheKey = `${text}__${colorHex}`;
+      if (qrCache.has(cacheKey)) return qrCache.get(cacheKey);
+
+      try {
+        const qr = new QRious({
+          value: text,
+          size: 140,
+          level: 'M',
+          background: 'transparent',
+          foreground: colorHex || '#000000'
+        });
+        const dataUrl = qr.toDataURL('image/png');
+        qrCache.set(cacheKey, dataUrl);
+        return dataUrl;
+      } catch (e) {
+        console.warn('QR error:', e);
+        return '';
+      }
+    }
+
+    // --- SKIP / REUSE PARTIAL SHEET LOGIC ---
+    function isSlotSkipped(globalSlotIdx) {
+      if (globalSlotIdx < (state.startAtSlot - 1)) return true;
+      return state.manualSkippedSlots.has(globalSlotIdx);
+    }
+
+    function toggleSlotSkip(globalSlotIdx) {
+      // If slot was skipped because of startAtSlot, adjust or toggle in manualSkippedSlots
+      if (globalSlotIdx < (state.startAtSlot - 1)) {
+        // Convert startAtSlot range into manual skips except the clicked one
+        for (let i = 0; i < state.startAtSlot - 1; i++) {
+          if (i !== globalSlotIdx) state.manualSkippedSlots.add(i);
+        }
+        state.startAtSlot = 1;
+        document.getElementById('input-start-slot').value = 1;
+      } else {
+        if (state.manualSkippedSlots.has(globalSlotIdx)) {
+          state.manualSkippedSlots.delete(globalSlotIdx);
+        } else {
+          state.manualSkippedSlots.add(globalSlotIdx);
+        }
+      }
+      updateSkippedCountBadge();
+      renderPreview();
+    }
+
+    function clearAllSkippedSlots() {
+      state.startAtSlot = 1;
+      state.manualSkippedSlots.clear();
+      document.getElementById('input-start-slot').value = 1;
+      updateSkippedCountBadge();
+      renderPreview();
+      showToast('All skipped sticker slots restored');
+    }
+
+    function updateSkippedCountBadge() {
+      const startSkips = Math.max(0, state.startAtSlot - 1);
+      let totalSkipped = startSkips;
+      state.manualSkippedSlots.forEach(idx => {
+        if (idx >= startSkips) totalSkipped++;
+      });
+      const badge = document.getElementById('skipped-count-badge');
+      if (badge) {
+        badge.innerText = `${totalSkipped} skipped`;
+      }
+    }
+
+    // --- TYPOGRAPHY & COLOR HELPERS ---
+    function setFontChoice(type) {
+      if (!FONTS[type]) return;
+      state.fontChoice = type;
+      state.fontFamily = FONTS[type];
+
+      ['sans', 'serif', 'mono'].forEach(f => {
+        const btn = document.getElementById(`font-btn-${f}`);
+        if (btn) {
+          btn.className = (f === type)
+            ? 'py-1.5 px-2 rounded text-xs text-center font-medium bg-blue-600 text-white transition'
+            : 'py-1.5 px-2 rounded text-xs text-center text-slate-400 hover:text-white transition';
+        }
+      });
+      renderPreview();
+    }
+
+    function setFontScalePreset(scale) {
+      const presets = {
+        sm: { pct: 80, label: '80% (Small)' },
+        md: { pct: 100, label: '100% (Normal)' },
+        lg: { pct: 125, label: '125% (Large)' }
+      };
+      if (!presets[scale]) return;
+
+      state.baseScale = presets[scale].pct;
+      document.getElementById('input-font-scale').value = state.baseScale;
+      document.getElementById('font-size-val').innerText = presets[scale].label;
+
+      applyCalculatedFontSizes();
+
+      ['sm', 'md', 'lg'].forEach(s => {
+        const btn = document.getElementById(`scale-btn-${s}`);
+        if (btn) {
+          btn.className = (s === scale)
+            ? 'py-1 text-xs rounded bg-blue-600/30 text-blue-300 border border-blue-500 font-medium'
+            : 'py-1 text-xs rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800';
+        }
+      });
+
+      renderPreview();
+    }
+
+    function applyCalculatedFontSizes() {
+      const factor = state.baseScale / 100;
+      state.titleSize = +(11 * factor).toFixed(1);
+      state.bodySize = +(8.5 * factor).toFixed(1);
+    }
+
+    function setColor(target, hex) {
+      if (target === 'text') {
+        state.textColor = hex;
+        document.getElementById('picker-text-color').value = hex;
+        document.getElementById('text-color-hex').innerText = hex;
+        qrCache.clear();
+      } else if (target === 'bg') {
+        state.bgColor = hex;
+        document.getElementById('picker-bg-color').value = hex;
+        document.getElementById('bg-color-hex').innerText = hex;
+      } else if (target === 'accent') {
+        state.accentColor = hex;
+        document.getElementById('picker-accent-color').value = hex;
+        document.getElementById('accent-color-hex').innerText = hex;
+      }
+      renderPreview();
+    }
+
+    function setTextAlign(align) {
+      state.textAlign = align;
+      ['left', 'center', 'right'].forEach(a => {
+        const btn = document.getElementById(`align-${a}`);
+        btn.className = (a === align)
+          ? 'py-1 rounded text-center bg-blue-600 text-white font-medium transition'
+          : 'py-1 rounded text-center text-slate-400 hover:text-white transition';
+      });
+      renderPreview();
+    }
+
+    function setVerticalAlign(valign) {
+      state.verticalAlign = valign;
+      const vMap = { 'flex-start': 'top', 'center': 'middle', 'flex-end': 'bottom' };
+      Object.entries(vMap).forEach(([val, idSuffix]) => {
+        const btn = document.getElementById(`valign-${idSuffix}`);
+        if (btn) {
+          btn.className = (val === valign)
+            ? 'py-1 rounded text-center bg-blue-600 text-white font-medium transition'
+            : 'py-1 rounded text-center text-slate-400 hover:text-white transition';
+        }
+      });
+      renderPreview();
+    }
+
+    function resetSheetMarginsAndGaps() {
+      state.sheetMarginY = 0;
+      state.sheetMarginX = 0;
+      state.labelGapX = 0;
+      state.labelGapY = 0;
+      document.getElementById('sheet-margin-y').value = 0;
+      document.getElementById('sheet-margin-x').value = 0;
+      document.getElementById('label-gap-x').value = 0;
+      document.getElementById('label-gap-y').value = 0;
+      recalculateDimensions();
+      showToast('Margins & gaps set to 0mm (Edge-to-Edge)');
+    }
+
+    // Auto-calculate exact label width & height from Paper Size minus Outer Margins and Pitch Gaps
+    function recalculateDimensions() {
+      const paper = PAPER_SIZES[state.paper];
+      const availableW = paper.widthMm - (state.sheetMarginX * 2) - ((state.cols - 1) * state.labelGapX);
+      const availableH = paper.heightMm - (state.sheetMarginY * 2) - ((state.rows - 1) * state.labelGapY);
+
+      state.labelWidth = Math.max(5, parseFloat((availableW / state.cols).toFixed(2)));
+      state.labelHeight = Math.max(5, parseFloat((availableH / state.rows).toFixed(2)));
+
+      document.getElementById('calc-total-per-sheet').innerText = `${state.cols * state.rows} labels`;
+      document.getElementById('calc-width-display').innerText = `${state.labelWidth.toFixed(2)} mm`;
+      document.getElementById('calc-height-display').innerText = `${state.labelHeight.toFixed(2)} mm`;
+
+      const formulaEl = document.getElementById('calc-formula-display');
+      if (formulaEl) {
+        formulaEl.innerText = `${availableW.toFixed(1)}÷${state.cols} × ${availableH.toFixed(1)}÷${state.rows} mm`;
+      }
+
+      document.getElementById('header-badge').innerText = `${paper.name} • ${state.cols}×${state.rows} (${state.cols * state.rows}/sheet)`;
+
+      updateRepeatCountDisplay();
+      renderPreview();
+    }
+
+    function adjustGrid(type, delta) {
+      if (type === 'cols') {
+        state.cols = Math.min(15, Math.max(1, state.cols + delta));
+        document.getElementById('grid-cols').value = state.cols;
+      } else {
+        state.rows = Math.min(30, Math.max(1, state.rows + delta));
+        document.getElementById('grid-rows').value = state.rows;
+      }
+      state.preset = 'custom';
+      document.getElementById('select-preset').value = 'custom';
+      recalculateDimensions();
+    }
+
+    function updateRepeatCountDisplay() {
+      const perSheet = state.cols * state.rows;
+      const count = state.repeatCount;
+      const pages = Math.ceil(count / perSheet) || 1;
+      document.getElementById('repeat-count-display').innerText = `${count} stickers (${pages} page${pages > 1 ? 's' : ''})`;
+    }
+
+    function applyPreset(code) {
+      state.preset = code;
+      if (code === '1276') {
+        setPaperFormat('A4', true);
+        state.cols = 3;
+        state.rows = 7;
+        state.sheetMarginY = 0;
+        state.sheetMarginX = 0;
+        state.labelGapX = 0;
+        state.labelGapY = 0;
+      } else if (code === '1263') {
+        setPaperFormat('A4', true);
+        state.cols = 3;
+        state.rows = 8;
+        state.sheetMarginY = 0;
+        state.sheetMarginX = 0;
+        state.labelGapX = 0;
+        state.labelGapY = 0;
+      } else if (code === '1277') {
+        setPaperFormat('A4', true);
+        state.cols = 2;
+        state.rows = 7;
+        state.sheetMarginY = 0;
+        state.sheetMarginX = 0;
+        state.labelGapX = 0;
+        state.labelGapY = 0;
+      } else if (code === '1264') {
+        setPaperFormat('A4', true);
+        state.cols = 2;
+        state.rows = 2;
+        state.sheetMarginY = 0;
+        state.sheetMarginX = 0;
+        state.labelGapX = 0;
+        state.labelGapY = 0;
+      } else if (code === '4x10') {
+        setPaperFormat('A4', true);
+        state.cols = 4;
+        state.rows = 10;
+        state.sheetMarginY = 0;
+        state.sheetMarginX = 0;
+        state.labelGapX = 0;
+        state.labelGapY = 0;
+      } else if (code === '5160') {
+        setPaperFormat('LETTER', true);
+        state.cols = 3;
+        state.rows = 10;
+        state.sheetMarginY = 12.7;
+        state.sheetMarginX = 4.8;
+        state.labelGapX = 3.2;
+        state.labelGapY = 0;
+      }
+
+      document.getElementById('grid-cols').value = state.cols;
+      document.getElementById('grid-rows').value = state.rows;
+      document.getElementById('sheet-margin-y').value = state.sheetMarginY;
+      document.getElementById('sheet-margin-x').value = state.sheetMarginX;
+      document.getElementById('label-gap-x').value = state.labelGapX;
+      document.getElementById('label-gap-y').value = state.labelGapY;
+      recalculateDimensions();
+    }
+
+    // Build array of active data items to print
+    function prepareDataset() {
+      const items = [];
+      const labelsPerSheet = state.cols * state.rows;
+
+      if (state.mode === 'all') {
+        const total = Math.max(1, state.repeatCount);
+        for (let i = 0; i < total; i++) {
+          items.push({
+            activeIndex: i,
+            title: state.titleText,
+            body: state.bodyText,
+            tag: state.tagText
+          });
+        }
+      } else {
+        const rawLines = state.individualList.length > 0
+          ? state.individualList
+          : document.getElementById('input-list').value.split('\n').filter(l => l.trim() !== '');
+
+        if (rawLines.length === 0) {
+          for (let i = 0; i < labelsPerSheet; i++) {
+            items.push({
+              activeIndex: i,
+              title: `Sticker #{n}`,
+              body: `Batch {batch} • {date}`,
+              tag: '{price}'
+            });
+          }
+        } else {
+          let activeIdx = 0;
+          rawLines.forEach((line) => {
+            for (let r = 0; r < state.itemRepeat; r++) {
+              let parts = line.split(',');
+              let title = parts[0]?.trim() || '';
+              let body = parts.slice(1).join(', ').trim();
+              if (!body && parts.length === 1) {
+                body = title;
+                title = '';
+              }
+              items.push({
+                activeIndex: activeIdx++,
+                title: title,
+                body: body,
+                tag: ''
+              });
+            }
+          });
+        }
+      }
+      return items;
+    }
+
+    function formatNumber(idx) {
+      const val = state.numStart + idx;
+      if (state.numPadding > 0) {
+        return `${state.numPrefix}${String(val).padStart(state.numPadding, '0')}`;
+      }
+      return `${state.numPrefix}${val}`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+    // Master layout builder: shifts active items past any skipped slots so zero items are lost
+    function generateSheetsHtml(isForPrint = false) {
+      const paper = PAPER_SIZES[state.paper];
+      const labelsPerSheet = state.cols * state.rows;
+      const activeItems = prepareDataset();
+      const totalActive = activeItems.length;
+
+      // Map active items into physical slots, skipping any excluded slots
+      const slotMap = [];
+      let itemCursor = 0;
+      let slotCursor = 0;
+      const maxSafetySlots = 5000;
+
+      while (itemCursor < totalActive && slotCursor < maxSafetySlots) {
+        if (isSlotSkipped(slotCursor)) {
+          slotMap.push({ skipped: true, item: null, slotIndex: slotCursor });
+        } else {
+          slotMap.push({ skipped: false, item: activeItems[itemCursor], slotIndex: slotCursor });
+          itemCursor++;
+        }
+        slotCursor++;
+      }
+
+      const totalPages = Math.max(1, Math.ceil(slotMap.length / labelsPerSheet));
+      let sheetsHtml = '';
+
+      // Calculate QR size dynamically based on label height and safe margin
+      const innerHeightMm = Math.max(8, state.labelHeight - (state.safeMargin * 2));
+      const qrSizeMm = Math.min(22, Math.max(10, +(innerHeightMm * 0.72).toFixed(1)));
+
+      for (let p = 0; p < totalPages; p++) {
+        const startSlot = p * labelsPerSheet;
+        const endSlot = startSlot + labelsPerSheet;
+
+        let cellsHtml = '';
+
+        for (let s = startSlot; s < endSlot; s++) {
+          const slotEntry = slotMap[s];
+          const isSkipped = slotEntry ? slotEntry.skipped : isSlotSkipped(s);
+          const item = slotEntry ? slotEntry.item : null;
+
+          // Borders: in print, show only if printBorders is enabled. In preview, show dashed guides.
+          const borderStyle = isForPrint
+            ? (state.printBorders ? 'border: 0.25mm solid #000000;' : 'border: none;')
+            : (state.printBorders ? 'border: 1px solid #334155;' : 'border: 1px dashed #cbd5e1;');
+
+          const clickAttr = !isForPrint ? `onclick="toggleSlotSkip(${s})"` : '';
+
+          if (isSkipped) {
+            // Skipped slot: 100% blank in Print/PDF, clearly marked in Preview
+            if (isForPrint) {
+              cellsHtml += `
+                <div style="width: ${state.labelWidth}mm; height: ${state.labelHeight}mm; box-sizing: border-box; ${borderStyle} background: transparent;"></div>
+              `;
+            } else {
+              cellsHtml += `
+                <div ${clickAttr} title="Slot #${s + 1} is skipped. Click to enable." class="sticker-slot cursor-pointer" style="width: ${state.labelWidth}mm; height: ${state.labelHeight}mm; box-sizing: border-box; ${borderStyle} position: relative; background: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 6px, #f1f5f9 6px, #f1f5f9 12px); display: flex; align-items: center; justify-content: center;">
+                  <div style="font-size: 8pt; font-family: monospace; color: #94a3b8; background: #ffffffcc; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">
+                    SKIPPED #${s + 1} (Click to use)
+                  </div>
+                </div>
+              `;
+            }
+          } else if (item) {
+            // Resolve variables for this active sticker
+            const resolvedTitle = resolveTextVariables(item.title, item.activeIndex, totalActive);
+            const resolvedBody = resolveTextVariables(item.body, item.activeIndex, totalActive);
+            const resolvedTag = resolveTextVariables(item.tag, item.activeIndex, totalActive);
+
+            // Numbering badge
+            let badgeHtml = '';
+            if (state.showNumber) {
+              const numStr = formatNumber(item.activeIndex);
+              if (state.numPlacement === 'badge-tl') {
+                badgeHtml = `<span style="position: absolute; top: ${Math.max(1, state.safeMargin - 2)}mm; left: ${Math.max(1, state.safeMargin - 2)}mm; font-size: 6.5pt; font-family: monospace; font-weight: bold; background: ${state.accentColor}; color: #ffffff; padding: 1px 4px; border-radius: 2px; line-height: 1.1; z-index: 2;">${escapeHtml(numStr)}</span>`;
+              } else if (state.numPlacement === 'badge-tr') {
+                badgeHtml = `<span style="position: absolute; top: ${Math.max(1, state.safeMargin - 2)}mm; right: ${Math.max(1, state.safeMargin - 2)}mm; font-size: 6.5pt; font-family: monospace; font-weight: bold; background: ${state.accentColor}; color: #ffffff; padding: 1px 4px; border-radius: 2px; line-height: 1.1; z-index: 2;">${escapeHtml(numStr)}</span>`;
+              }
+            }
+
+            const inlineNum = (state.showNumber && state.numPlacement === 'inline') 
+              ? `<span style="color: ${state.accentColor}; font-family: monospace; margin-right: 4px;">${escapeHtml(formatNumber(item.activeIndex))}</span>` 
+              : '';
+
+            const titleHtml = (resolvedTitle || inlineNum)
+              ? `<div style="font-size: ${state.titleSize}pt; font-weight: 700; line-height: 1.15; color: ${state.textColor}; margin-bottom: 1.5px;">${inlineNum}${escapeHtml(resolvedTitle)}</div>`
+              : '';
+
+            const bodyHtml = resolvedBody 
+              ? `<div style="font-size: ${state.bodySize}pt; line-height: 1.25; color: ${state.textColor}; opacity: 0.92; white-space: pre-line; word-break: break-word;">${escapeHtml(resolvedBody)}</div>`
+              : '';
+
+            const bottomNum = (state.showNumber && state.numPlacement === 'bottom')
+              ? `<span style="font-family: monospace; font-size: 7pt; color: ${state.accentColor}; font-weight: 600;">${escapeHtml(formatNumber(item.activeIndex))}</span>`
+              : '';
+
+            const tagHtml = resolvedTag 
+              ? `<span style="font-size: 7pt; font-weight: 600; background: ${state.accentColor}18; border: 0.5px solid ${state.accentColor}50; padding: 1px 4px; border-radius: 2px; color: ${state.accentColor};">${escapeHtml(resolvedTag)}</span>`
+              : '';
+
+            const alignJustify = state.textAlign === 'center' ? 'center' : (state.textAlign === 'right' ? 'flex-end' : 'space-between');
+            const footerHtml = (tagHtml || bottomNum)
+              ? `<div style="margin-top: 3px; display: flex; align-items: center; justify-content: ${alignJustify}; gap: 6px; width: 100%;">${tagHtml}${bottomNum}</div>`
+              : '';
+
+            // QR Code HTML if enabled
+            let qrHtml = '';
+            if (state.showQr && state.qrText.trim() !== '') {
+              const resolvedQr = resolveTextVariables(state.qrText.trim(), item.activeIndex, totalActive);
+              const qrDataUrl = getQrDataUrl(resolvedQr, state.textColor);
+              if (qrDataUrl) {
+                qrHtml = `
+                  <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                    <img src="${qrDataUrl}" style="width: ${qrSizeMm}mm; height: ${qrSizeMm}mm; display: block; object-fit: contain;" alt="QR" />
+                  </div>
+                `;
+              }
+            }
+
+            const safeOutline = (!isForPrint && state.showSafeZone)
+              ? 'outline: 1px dashed rgba(244, 63, 94, 0.55); outline-offset: -1px;'
+              : '';
+
+            const hoverSkipHint = !isForPrint
+              ? `<span class="skip-badge" style="opacity: 0; position: absolute; top: 1mm; right: 1.5mm; font-size: 6pt; font-family: sans-serif; background: #0f172acc; color: #fff; padding: 1px 4px; border-radius: 2px; pointer-events: none; transition: opacity 0.15s;">Slot #${s + 1} • Click to skip</span>`
+              : '';
+
+            const flexDir = (qrHtml && state.qrPlacement === 'left') ? 'row-reverse' : 'row';
+
+            cellsHtml += `
+              <div ${clickAttr} class="sticker-slot ${!isForPrint ? 'cursor-pointer' : ''}" style="width: ${state.labelWidth}mm; height: ${state.labelHeight}mm; box-sizing: border-box; ${borderStyle} position: relative; overflow: hidden; background: ${state.bgColor};">
+                ${hoverSkipHint}
+                ${badgeHtml}
+                <div style="width: 100%; height: 100%; box-sizing: border-box; padding: ${state.safeMargin}mm; display: flex; flex-direction: ${flexDir}; align-items: center; justify-content: space-between; gap: 2.5mm; ${safeOutline}">
+                  <div style="flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: ${state.verticalAlign}; text-align: ${state.textAlign};">
+                    ${titleHtml}
+                    ${bodyHtml}
+                    ${footerHtml}
+                  </div>
+                  ${qrHtml}
+                </div>
+              </div>
+            `;
+          } else {
+            // Trailing empty slot at end of sheet
+            cellsHtml += `
+              <div ${clickAttr} class="sticker-slot ${!isForPrint ? 'cursor-pointer' : ''}" style="width: ${state.labelWidth}mm; height: ${state.labelHeight}mm; box-sizing: border-box; ${borderStyle} background: ${isForPrint ? 'transparent' : '#ffffff'};"></div>
+            `;
+          }
+        }
+
+        const pageLabel = !isForPrint 
+          ? `<div class="no-print" style="position: absolute; top: -22px; left: 0; font-size: 11px; font-family: monospace; color: #94a3b8; font-weight: 600;">PAGE ${p + 1} OF ${totalPages}</div>`
+          : '';
+
+        sheetsHtml += `
+          <div class="page-sheet preview-sheet" style="width: ${paper.widthMm}mm; height: ${paper.heightMm}mm; position: relative; box-sizing: border-box; overflow: hidden; font-family: ${state.fontFamily};">
+            ${pageLabel}
+            <div style="width: 100%; height: 100%; box-sizing: border-box; display: grid; grid-template-columns: repeat(${state.cols}, ${state.labelWidth}mm); grid-template-rows: repeat(${state.rows}, ${state.labelHeight}mm); column-gap: ${state.labelGapX}mm; row-gap: ${state.labelGapY}mm; padding: ${state.sheetMarginY}mm ${state.sheetMarginX}mm; transform: translate(${state.offsetX}mm, ${state.offsetY}mm);">
+              ${cellsHtml}
+            </div>
+          </div>
+        `;
+      }
+
+      return { sheetsHtml, totalPages, totalCount: totalActive };
+    }
+
+    // Render interactive preview in DOM
+    function renderPreview() {
+      const { sheetsHtml, totalPages, totalCount } = generateSheetsHtml(false);
+      const wrapper = document.getElementById('preview-wrapper');
+      wrapper.innerHTML = sheetsHtml;
+
+      document.getElementById('total-pages-badge').innerText = `${totalPages} Page${totalPages > 1 ? 's' : ''} (${totalCount} Active Stickers)`;
+      const bulkStats = document.getElementById('bulk-stats-label');
+      if (bulkStats) {
+        bulkStats.innerText = `${totalCount} stickers (${totalPages} page${totalPages > 1 ? 's' : ''})`;
+      }
+
+      setZoom(state.zoom);
+      saveStateToStorage();
+    }
+
+    function setZoom(val) {
+      state.zoom = Math.min(Math.max(val, 0.35), 1.5);
+      const wrapper = document.getElementById('preview-wrapper');
+      wrapper.style.transform = `scale(${state.zoom})`;
+      document.getElementById('zoom-label').innerText = `${Math.round(state.zoom * 100)}%`;
+    }
+
+    // Full Complete HTML document for clean new-tab printing
+    function createPrintableDocument(isTestBorders = false) {
+      const prevBorders = state.printBorders;
+      if (isTestBorders) state.printBorders = true;
+      const { sheetsHtml } = generateSheetsHtml(true);
+      state.printBorders = prevBorders;
+
+      const paper = PAPER_SIZES[state.paper];
+
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Sticker Labels Printout (${paper.name} - ${state.cols}x${state.rows})</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: ${paper.widthMm}mm ${paper.heightMm}mm;
+      margin: 0mm !important;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      font-family: ${state.fontFamily};
+    }
+    .no-print-bar {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 20px;
+      font-family: sans-serif;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+    }
+    .no-print-bar button {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    @media print {
+      .no-print-bar {
+        display: none !important;
+      }
+    }
+    .page-sheet {
+      width: ${paper.widthMm}mm;
+      height: ${paper.heightMm}mm;
+      page-break-after: always;
+      break-after: page;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    .page-sheet:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print-bar">
+    <span><strong>Ready to Print:</strong> Set Scale to <strong>100% (Actual Size)</strong> and Media Type to <strong>Labels / Heavy Paper</strong>.</span>
+    <button onclick="window.print()">Print / Save as PDF (Cmd+P / Ctrl+P)</button>
+  </div>
+  ${sheetsHtml}
+</body>
+</html>`;
+    }
+
+    // Crisp, Exact-Aspect PDF Generation
+    async function exportCleanPDF() {
+      const downloadBtn = document.getElementById('btn-download-pdf');
+      const origText = downloadBtn.innerHTML;
+      downloadBtn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Building PDF...`;
+      downloadBtn.disabled = true;
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const paper = PAPER_SIZES[state.paper];
+
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: [paper.widthMm, paper.heightMm],
+          compress: true
+        });
+
+        const mmToPx = 3.7795275591;
+        const sheetPxW = Math.round(paper.widthMm * mmToPx);
+
+        const tempMount = document.createElement('div');
+        tempMount.style.position = 'fixed';
+        tempMount.style.top = '-10000px';
+        tempMount.style.left = '-10000px';
+        tempMount.style.width = `${sheetPxW}px`;
+        tempMount.style.zIndex = '-9999';
+        tempMount.style.background = '#ffffff';
+
+        const { sheetsHtml } = generateSheetsHtml(true);
+        tempMount.innerHTML = sheetsHtml;
+        document.body.appendChild(tempMount);
+
+        const sheets = tempMount.querySelectorAll('.page-sheet');
+
+        for (let i = 0; i < sheets.length; i++) {
+          const sheetElem = sheets[i];
+          sheetElem.style.boxShadow = 'none';
+
+          const canvas = await html2canvas(sheetElem, {
+            scale: 2.5,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            logging: false
+          });
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.96);
+          if (i > 0) {
+            pdf.addPage([paper.widthMm, paper.heightMm], 'portrait');
+          }
+          pdf.addImage(imgData, 'JPEG', 0, 0, paper.widthMm, paper.heightMm, undefined, 'FAST');
+        }
+
+        document.body.removeChild(tempMount);
+        pdf.save(`Stickers-${state.paper}-${state.cols}x${state.rows}.pdf`);
+        showToast('High-DPI PDF downloaded!');
+      } catch (err) {
+        console.error("PDF generation error:", err);
+        showToast('PDF export error. Click "Open Printable Tab" to save PDF.');
+      } finally {
+        downloadBtn.innerHTML = origText;
+        downloadBtn.disabled = false;
+        lucide.createIcons();
+      }
+    }
+
+    // Open Printable Tab
+    function openInNewTab() {
+      const docHtml = createPrintableDocument(state.printBorders);
+      const newWin = window.open('', '_blank');
+      if (newWin) {
+        newWin.document.open();
+        newWin.document.write(docHtml);
+        newWin.document.close();
+      } else {
+        showToast("Popup blocked! Please allow popups for this site.");
+      }
+    }
+
+    function switchTab(tab) {
+      ['content', 'layout', 'style'].forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const panel = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+          btn.className = 'tab-btn flex-1 py-2 rounded-md flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-sm';
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = 'tab-btn flex-1 py-2 rounded-md flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200';
+          panel.classList.add('hidden');
+        }
+      });
+    }
+
+    function setContentMode(mode, skipRender = false) {
+      state.mode = mode;
+      const btnAll = document.getElementById('mode-all');
+      const btnInd = document.getElementById('mode-individual');
+      const secAll = document.getElementById('section-mode-all');
+      const secInd = document.getElementById('section-mode-individual');
+
+      if (mode === 'all') {
+        btnAll.className = 'py-1.5 rounded text-xs font-medium bg-blue-600 text-white transition';
+        btnInd.className = 'py-1.5 rounded text-xs font-medium text-slate-400 hover:text-slate-200 transition';
+        secAll.classList.remove('hidden');
+        secInd.classList.add('hidden');
+      } else {
+        btnAll.className = 'py-1.5 rounded text-xs font-medium text-slate-400 hover:text-slate-200 transition';
+        btnInd.className = 'py-1.5 rounded text-xs font-medium bg-blue-600 text-white transition';
+        secAll.classList.add('hidden');
+        secInd.classList.remove('hidden');
+      }
+      if (!skipRender) renderPreview();
+    }
+
+    function setPaperFormat(fmt, skipRecalc = false) {
+      state.paper = fmt;
+      const btnA4 = document.getElementById('paper-a4');
+      const btnLetter = document.getElementById('paper-letter');
+
+      if (fmt === 'A4') {
+        btnA4.className = 'py-1.5 rounded text-xs font-semibold bg-blue-600 text-white border border-blue-500';
+        btnLetter.className = 'py-1.5 rounded text-xs font-semibold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white';
+        document.getElementById('footer-sheet-info').innerText = 'Paper: A4 (210 × 297mm)';
+      } else {
+        btnA4.className = 'py-1.5 rounded text-xs font-semibold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white';
+        btnLetter.className = 'py-1.5 rounded text-xs font-semibold bg-blue-600 text-white border border-blue-500';
+        document.getElementById('footer-sheet-info').innerText = 'Paper: US Letter (215.9 × 279.4mm)';
+      }
+      if (!skipRecalc) recalculateDimensions();
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toast-msg');
+      msgEl.innerText = msg;
+      toast.classList.remove('opacity-0', 'translate-y-20');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-20');
+      }, 2800);
+    }
+
+    // Attach DOM event listeners
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+
+      // Track last focused input for variable pill insertion
+      document.querySelectorAll('[data-var-target="true"]').forEach(el => {
+        el.addEventListener('focus', () => {
+          lastFocusedInput = el;
+        });
+      });
+
+      renderVariablesUI();
+
+      // Input Listeners
+      document.getElementById('input-title').addEventListener('input', (e) => {
+        state.titleText = e.target.value;
+        renderPreview();
+      });
+
+      document.getElementById('input-body').addEventListener('input', (e) => {
+        state.bodyText = e.target.value;
+        renderPreview();
+      });
+
+      document.getElementById('input-tag').addEventListener('input', (e) => {
+        state.tagText = e.target.value;
+        renderPreview();
+      });
+
+      document.getElementById('input-repeat-count').addEventListener('input', (e) => {
+        state.repeatCount = Math.max(1, parseInt(e.target.value) || 1);
+        updateRepeatCountDisplay();
+        renderPreview();
+      });
+
+      document.getElementById('input-list').addEventListener('input', (e) => {
+        state.individualListText = e.target.value;
+        state.individualList = e.target.value.split('\n').filter(l => l.trim() !== '');
+        renderPreview();
+      });
+
+      document.getElementById('input-item-repeat').addEventListener('input', (e) => {
+        state.itemRepeat = Math.max(1, parseInt(e.target.value) || 1);
+        renderPreview();
+      });
+
+      // Partial Sheet Start Slot Listener
+      document.getElementById('input-start-slot').addEventListener('input', (e) => {
+        state.startAtSlot = Math.max(1, parseInt(e.target.value) || 1);
+        updateSkippedCountBadge();
+        renderPreview();
+      });
+
+      // Simplified QR Code Listeners
+      document.getElementById('check-show-qr').addEventListener('change', (e) => {
+        state.showQr = e.target.checked;
+        document.getElementById('qr-options').classList.toggle('hidden', !state.showQr);
+        renderPreview();
+      });
+
+      document.getElementById('input-qr-text').addEventListener('input', (e) => {
+        state.qrText = e.target.value;
+        qrCache.clear();
+        renderPreview();
+      });
+
+      document.getElementById('qr-placement').addEventListener('change', (e) => {
+        state.qrPlacement = e.target.value;
+        renderPreview();
+      });
+
+      // Color Picker Listeners
+      document.getElementById('picker-text-color').addEventListener('input', (e) => {
+        setColor('text', e.target.value);
+      });
+
+      document.getElementById('picker-bg-color').addEventListener('input', (e) => {
+        setColor('bg', e.target.value);
+      });
+
+      document.getElementById('picker-accent-color').addEventListener('input', (e) => {
+        setColor('accent', e.target.value);
+      });
+
+      // Single Unified Font Scale Slider
+      document.getElementById('input-font-scale').addEventListener('input', (e) => {
+        state.baseScale = parseInt(e.target.value);
+        document.getElementById('font-size-val').innerText = `${state.baseScale}% (Custom)`;
+        applyCalculatedFontSizes();
+        ['sm', 'md', 'lg'].forEach(s => {
+          const btn = document.getElementById(`scale-btn-${s}`);
+          if (btn) btn.className = 'py-1 text-xs rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800';
+        });
+        renderPreview();
+      });
+
+      // Numbering Toggle
+      document.getElementById('check-show-number').addEventListener('change', (e) => {
+        state.showNumber = e.target.checked;
+        document.getElementById('numbering-options').classList.toggle('hidden', !state.showNumber);
+        renderPreview();
+      });
+
+      document.getElementById('num-prefix').addEventListener('input', (e) => {
+        state.numPrefix = e.target.value;
+        renderPreview();
+      });
+
+      document.getElementById('num-start').addEventListener('input', (e) => {
+        state.numStart = parseInt(e.target.value) || 0;
+        renderPreview();
+      });
+
+      document.getElementById('num-placement').addEventListener('change', (e) => {
+        state.numPlacement = e.target.value;
+        renderPreview();
+      });
+
+      document.getElementById('num-padding').addEventListener('change', (e) => {
+        state.numPadding = parseInt(e.target.value);
+        renderPreview();
+      });
+
+      // Sample Data Buttons
+      document.getElementById('btn-sample-addresses').addEventListener('click', () => {
+        const samples = [
+          "Sarah Jenkins, 742 Evergreen Terrace • Ref {batch}",
+          "TechNova Solutions, Suite 400 Innovation Way • SF CA",
+          "Global Parcel Depot, Bay 12-C • Chicago IL",
+          "Nordic Woodcrafts, Attn: Dept 4 • Seattle WA",
+          "BioHealth Labs, Cold Chain Urgent • Boston MA",
+          "Urban Roast Coffee, 100 Main Street • Austin TX",
+          "Apex Electronics, Dock 4 Industrial Blvd • Dallas TX",
+          "Highland Booksellers, 221B Baker St • London UK",
+          "Pacific Marine Cargo, Berth 7 • San Pedro CA",
+          "Cascade Organic Farms, Route 9 Box 44 • Hood River OR",
+          "Silverline Freight, Terminal A • Atlanta GA",
+          "Keystone Medical Supply, Bldg 3 • Pittsburgh PA",
+          "Redwood Timber Ltd, 808 Forestry Rd • Eureka CA",
+          "Sunrise Bakery Co, 12 Elm Street • Portland ME",
+          "Beacon Design Studio, 55 Mercer St • New York NY",
+          "Pioneer Robotics, Lab 2 • Boulder CO",
+          "Lakeside Automotive, 450 Shoreline Ave • Detroit MI",
+          "Delta Logistics Group, Gate 14 • Memphis TN",
+          "Greenfield Nursery, Greenhouse 6 • Lancaster PA",
+          "Apollo Aerospace, Facility 9 • Cape Canaveral FL",
+          "Summit Gear & Apparel, Suite 10 • Denver CO",
+          "Blue Ocean Exports, Berth 12 • Miami FL",
+          "Horizon Solar Systems, 90 Solar Way • Phoenix AZ",
+          "Maple Grove Goods, Highway 4 • Burlington VT"
+        ];
+        document.getElementById('input-list').value = samples.join('\n');
+        state.individualListText = samples.join('\n');
+        state.individualList = samples;
+        renderPreview();
+        showToast('Loaded 24 items across 2 pages');
+      });
+
+      document.getElementById('btn-sample-products').addEventListener('click', () => {
+        const products = [
+          "ORGANIC GREEN TEA, Batch {batch} • Packed {date}",
+          "DARK ROAST ESPRESSO, Single Origin • {price}",
+          "RAW WILDFLOWER HONEY, 250g Jar • {price}",
+          "LAVENDER HAND BALM, 50ml Herbal Infusion",
+          "EXTRA VIRGIN OLIVE OIL, First Cold Press 500ml",
+          "FLAKY SEA SALT, Artisan Harvest 200g",
+          "PURE VANILLA EXTRACT, Madagascar 100ml",
+          "DRIED MANGO SLICES, Unsweetened 150g"
+        ];
+        document.getElementById('input-list').value = products.join('\n');
+        state.individualListText = products.join('\n');
+        state.individualList = products;
+        renderPreview();
+        showToast('Sample products with variables loaded');
+      });
+
+      // Grid & Auto-dimension inputs
+      document.getElementById('grid-cols').addEventListener('input', (e) => {
+        state.cols = Math.min(15, Math.max(1, parseInt(e.target.value) || 1));
+        state.preset = 'custom';
+        document.getElementById('select-preset').value = 'custom';
+        recalculateDimensions();
+      });
+
+      document.getElementById('grid-rows').addEventListener('input', (e) => {
+        state.rows = Math.min(30, Math.max(1, parseInt(e.target.value) || 1));
+        state.preset = 'custom';
+        document.getElementById('select-preset').value = 'custom';
+        recalculateDimensions();
+      });
+
+      document.getElementById('sheet-margin-y').addEventListener('input', (e) => {
+        state.sheetMarginY = parseFloat(e.target.value) || 0;
+        state.preset = 'custom';
+        document.getElementById('select-preset').value = 'custom';
+        recalculateDimensions();
+      });
+
+      document.getElementById('sheet-margin-x').addEventListener('input', (e) => {
+        state.sheetMarginX = parseFloat(e.target.value) || 0;
+        state.preset = 'custom';
+        document.getElementById('select-preset').value = 'custom';
+        recalculateDimensions();
+      });
+
+      document.getElementById('label-gap-x').addEventListener('input', (e) => {
+        state.labelGapX = parseFloat(e.target.value) || 0;
+        state.preset = 'custom';
+        document.getElementById('select-preset').value = 'custom';
+        recalculateDimensions();
+      });
+
+      document.getElementById('label-gap-y').addEventListener('input', (e) => {
+        state.labelGapY = parseFloat(e.target.value) || 0;
+        state.preset = 'custom';
+        document.getElementById('select-preset').value = 'custom';
+        recalculateDimensions();
+      });
+
+      document.getElementById('select-preset').addEventListener('change', (e) => {
+        applyPreset(e.target.value);
+        showToast(`Preset applied: ${e.target.options[e.target.selectedIndex].text}`);
+      });
+
+      // Safe Margin
+      const safeMarginInput = document.getElementById('input-safe-margin');
+      safeMarginInput.addEventListener('input', (e) => {
+        state.safeMargin = parseFloat(e.target.value);
+        document.getElementById('safe-margin-val').innerText = `${state.safeMargin.toFixed(1)} mm`;
+        renderPreview();
+      });
+
+      document.getElementById('check-show-safezone').addEventListener('change', (e) => {
+        state.showSafeZone = e.target.checked;
+        renderPreview();
+      });
+
+      // Printer Hardware Offset
+      const offsetXInput = document.getElementById('input-offset-x');
+      offsetXInput.addEventListener('input', (e) => {
+        state.offsetX = parseFloat(e.target.value);
+        document.getElementById('offset-x-val').innerText = `${state.offsetX > 0 ? '+' : ''}${state.offsetX.toFixed(1)} mm`;
+        renderPreview();
+      });
+
+      const offsetYInput = document.getElementById('input-offset-y');
+      offsetYInput.addEventListener('input', (e) => {
+        state.offsetY = parseFloat(e.target.value);
+        document.getElementById('offset-y-val').innerText = `${state.offsetY > 0 ? '+' : ''}${state.offsetY.toFixed(1)} mm`;
+        renderPreview();
+      });
+
+      document.getElementById('btn-reset-offsets').addEventListener('click', () => {
+        state.offsetX = 0.0;
+        state.offsetY = 0.0;
+        offsetXInput.value = 0;
+        offsetYInput.value = 0;
+        document.getElementById('offset-x-val').innerText = '0.0 mm';
+        document.getElementById('offset-y-val').innerText = '0.0 mm';
+        renderPreview();
+        showToast('Calibration offsets reset');
+      });
+
+      function syncPrintBordersUI() {
+        document.getElementById('check-print-borders').checked = state.printBorders;
+        const btnLabel = document.getElementById('test-border-btn-label');
+        if (btnLabel) {
+          btnLabel.innerText = `Test Borders: ${state.printBorders ? 'ON' : 'OFF'}`;
+        }
+      }
+
+      document.getElementById('check-print-borders').addEventListener('change', (e) => {
+        state.printBorders = e.target.checked;
+        syncPrintBordersUI();
+        renderPreview();
+      });
+
+      // Top bar Test Borders toggle button
+      document.getElementById('btn-print-test').addEventListener('click', () => {
+        state.printBorders = !state.printBorders;
+        syncPrintBordersUI();
+        renderPreview();
+        showToast(state.printBorders ? 'Test cut-line borders ON for PDF & Print' : 'Test borders OFF (Clean sticker print)');
+      });
+
+      // Zoom Controls
+      document.getElementById('zoom-in').addEventListener('click', () => setZoom(state.zoom + 0.1));
+      document.getElementById('zoom-out').addEventListener('click', () => setZoom(state.zoom - 0.1));
+      document.getElementById('zoom-fit').addEventListener('click', () => setZoom(0.8));
+
+      // Export Actions
+      document.getElementById('btn-download-pdf').addEventListener('click', () => {
+        exportCleanPDF();
+      });
+
+      document.getElementById('btn-open-tab').addEventListener('click', () => {
+        openInNewTab();
+      });
+
+      document.getElementById('btn-reset-all').addEventListener('click', () => {
+        resetAllToDefaults();
+      });
+
+      document.getElementById('btn-header-reset').addEventListener('click', () => {
+        resetAllToDefaults();
+      });
+
+      // Initialize: restore saved setup from localStorage or default to Ref 1276
+      if (loadStateFromStorage()) {
+        syncAllDomInputsFromState();
+      } else {
+        applyPreset('1276');
+      }
+    });
+  </script>
+</body>
+</html>
